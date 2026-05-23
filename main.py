@@ -10,7 +10,8 @@ app = FastAPI()
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-CACHE = {"date": None, "quotes": ["Chào bạn, một ngày mới tốt lành!"]}
+# Cache giờ đây lưu thêm 'time_slot' để biết đã qua 5 phút chưa
+CACHE = {"time_slot": None, "quotes": ["Chào bạn, một ngày mới tốt lành!"]}
 
 def get_weather_theme():
     try:
@@ -18,7 +19,6 @@ def get_weather_theme():
         data = response.json()
         current = data['current_condition'][0]
         code = int(current['weatherCode'])
-        
         if code == 113: return {"desc": "☀️ Nắng ráo", "colors": ["#f59e0b", "#d97706"]}
         elif code in [116, 119, 122]: return {"desc": "☁️ Nhiều mây", "colors": ["#475569", "#1e293b"]}
         elif code >= 176 and code <= 356: return {"desc": "🌧️ Mưa", "colors": ["#1e3a8a", "#0f172a"]}
@@ -41,11 +41,16 @@ def scrape_quotes():
 def get_quote():
     tz = pytz.timezone('Asia/Ho_Chi_Minh')
     now = datetime.now(tz)
-    today = now.strftime("%Y-%m-%d")
     
-    if CACHE["date"] != today:
+    # CHÌA KHÓA: Tính toán block 5 phút (Ví dụ: 13:05, 13:10, 13:15...)
+    # Chia phút cho 5 sẽ ra một con số cố định cho mỗi 5 phút
+    current_time_slot = f"{now.date()}_{now.hour}_{now.minute // 5}"
+    
+    # Nếu đã qua 5 phút, cào lại dữ liệu mới
+    if CACHE["time_slot"] != current_time_slot:
         CACHE["quotes"] = scrape_quotes()
-        CACHE["date"] = today
+        CACHE["time_slot"] = current_time_slot
+        print(f"Đã làm mới dữ liệu cho block: {current_time_slot}")
 
     # Phân loại theo khung giờ
     if 5 <= now.hour < 12:
