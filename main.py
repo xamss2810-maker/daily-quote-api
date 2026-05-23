@@ -1,56 +1,49 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import random
 import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
+import pytz
+import random
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-DATA_QUOTES = [
-    {"category": "💡 Mẹo Hay", "content": "Áp dụng quy tắc 2 phút: Nếu việc gì đó mất chưa đầy 2 phút để hoàn thành, hãy làm nó ngay lập tức."},
-    {"category": "🌱 Động Lực", "content": "Hành trình vạn dặm khởi đầu từ một bước chân. Đừng nhìn vào đỉnh núi, hãy nhìn vào bước tiếp theo."},
-    {"category": "🧠 Triết Lý", "content": "Chúng ta không thể chọn nơi mình sinh ra, nhưng có thể chọn cách mình đối mặt với nghịch cảnh."},
-    {"category": "🎯 Tập Trung", "content": "Tắt thông báo mạng xã hội trong 2 tiếng tới. Sự tập trung sâu sẽ tạo nên sự khác biệt."}
-]
-
-def get_weather_theme():
-    """Gọi API thời tiết công cộng để lấy trạng thái thời tiết thực tế"""
+# Hàm cào dữ liệu tiếng Việt từ web
+def scrape_quotes():
     try:
-        # Lấy thời tiết tại TP.HCM/Việt Nam qua API công cộng (không cần API Key)
-        response = requests.get("https://wttr.in/Ho_Chi_Minh?format=j1", timeout=5)
-        data = response.json()
-        current_condition = data['current_condition'][0]
-        weather_code = int(current_condition['weatherCode'])
-        weather_desc = current_condition['lang_vnm'][0]['value'] if 'lang_vnm' in current_condition else current_condition['weatherDesc'][0]['value']
+        # Ví dụ một trang web trích dẫn tiếng Việt (Bạn có thể đổi URL khác)
+        url = "https://www.thuvien-hay.com/danh-ngon-cuoc-song/"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Thiết lập các bảng màu Gradient thời thượng [Màu_Bắt_Đầu, Màu_Kết_Thúc]
-        if weather_code in [113]:  # Trời nắng / Trời quang
-            return {"desc": f"☀️ {weather_desc}", "colors": ["#f59e0b", "#d97706"]} # Gradient Cam Vàng rực rỡ
-        elif weather_code in [116, 119, 122]:  # Nhiều mây / Có mây
-            return {"desc": f"☁️ {weather_desc}", "colors": ["#475569", "#1e293b"]} # Gradient Xám Xanh thanh lịch
-        elif weather_code in [176, 263, 266, 293, 296, 302, 353, 356]:  # Mưa rào / Mưa nhỏ
-            return {"desc": f"🌧️ {weather_desc}", "colors": ["#1e3a8a", "#0f172a"]} # Gradient Xanh Dương Đậm dịu mát
-        elif weather_code in [386, 389]:  # Có dông sét
-            return {"desc": f"⛈️ {weather_desc}", "colors": ["#581c87", "#2e1065"]} # Gradient Tím Đậm huyền bí
-        else:
-            return {"desc": f"✨ {weather_desc}", "colors": ["#111827", "#030712"]} # Mặc định ban đêm/trời mát màu tối
-    except Exception:
-        # Phương án dự phòng nếu API thời tiết bị lỗi
-        return {"desc": "🍃 Bình yên", "colors": ["#065f46", "#022c22"]} # Màu Xanh Lá Đậm mát mẻ
+        # Tìm các thẻ chứa câu nói (ví dụ thẻ <p> hoặc <div> có class cụ thể)
+        # Lưu ý: Phần này phải khớp với cấu trúc HTML của web bạn chọn
+        quotes = [p.text.strip() for p in soup.find_all('p') if len(p.text) > 15]
+        
+        return quotes if quotes else ["Sống là cho đâu chỉ nhận riêng mình."]
+    except:
+        return ["Hãy yêu công việc bạn đang làm."]
 
 @app.get("/quote")
 def get_quote():
-    quote = random.choice(DATA_QUOTES)
+    tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    hour = datetime.now(tz).hour
+    
+    # Lấy dữ liệu cào được
+    all_quotes = scrape_quotes()
+    content = random.choice(all_quotes)
+    
+    # Phân loại tự động theo giờ
+    if 5 <= hour < 12: category = "🌱 Năng lượng"
+    elif 12 <= hour < 18: category = "💡 Góc nhìn"
+    else: category = "🧠 Suy ngẫm"
+    
+    # Kết hợp thời tiết (hàm get_weather_theme giữ nguyên như cũ)
     weather = get_weather_theme()
     
     return {
-        "category": f"{quote['category']}  |  {weather['desc']}",
-        "content": quote["content"],
-        "bg_colors": weather["colors"] # Trả về mảng 2 màu để làm nền Gradient
+        "category": f"{category} | {weather['desc']}",
+        "content": content,
+        "bg_colors": weather["colors"]
     }
