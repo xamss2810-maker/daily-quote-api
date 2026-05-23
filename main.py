@@ -17,12 +17,12 @@ def get_weather_theme():
         data = response.json()
         code = int(data['current_condition'][0]['weatherCode'])
         
-        if code == 113: return ["#f59e0b", "#d97706"], "☀️ Nắng"
-        elif code in [116, 119, 122]: return ["#475569", "#1e293b"], "☁️ Mây"
-        elif code >= 176 and code <= 356: return ["#1e3a8a", "#0f172a"], "🌧️ Mưa"
-        return ["#111827", "#030712"], "✨ Dịu"
+        if code == 113: return ["#f59e0b", "#d97706"], "☀️ Nắng", "☀️"
+        elif code in [116, 119, 122]: return ["#475569", "#1e293b"], "☁️ Mây", "☁️"
+        elif code >= 176 and code <= 356: return ["#1e3a8a", "#0f172a"], "🌧️ Mưa", "🌧️"
+        return ["#111827", "#030712"], "✨ Dịu", "✨"
     except:
-        return ["#065f46", "#022c22"], "🍃 Bình yên"
+        return ["#065f46", "#022c22"], "🍃 Bình yên", "🍃"
 
 def scrape_quotes():
     try:
@@ -45,18 +45,19 @@ def get_quote():
             CACHE["quotes"] = scrape_quotes()
             CACHE["time_slot"] = current_time_slot
 
-        # Lấy màu và trạng thái thời tiết
-        colors, weather_desc = get_weather_theme()
+        # Lấy thời tiết và màu
+        colors, weather_desc, weather_icon = get_weather_theme()
         
-        # Phân loại giờ
+        # Phân loại giờ (Đưa lên trước khi return)
         if 5 <= now.hour < 12: cat = "🌱 Năng lượng sáng"
         elif 12 <= now.hour < 18: cat = "💡 Góc nhìn trưa"
         else: cat = "🧠 Suy ngẫm tối"
         
         return {
-            "category": f"{cat} | {weather_desc}", 
+            "category": f"{weather_icon} {cat} | {weather_desc}", 
             "content": random.choice(CACHE["quotes"]), 
-            "bg_colors": colors
+            "bg_colors": colors,
+            "icon": weather_icon
         }
     except:
         return {"category": "HỆ THỐNG", "content": "Đang kết nối...", "bg_colors": ["#374151", "#1f2937"]}
