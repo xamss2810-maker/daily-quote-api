@@ -8,38 +8,46 @@ import random
 
 app = FastAPI()
 
-# Hàm cào dữ liệu tiếng Việt từ web
+# Biến toàn cục để lưu cache
+CACHE = {
+    "date": None,
+    "quotes": ["Hãy tận hưởng ngày mới tuyệt vời!"]
+}
+
 def scrape_quotes():
+    """Chỉ cào khi cần thiết"""
     try:
-        # Ví dụ một trang web trích dẫn tiếng Việt (Bạn có thể đổi URL khác)
         url = "https://www.thuvien-hay.com/danh-ngon-cuoc-song/"
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Tìm các thẻ chứa câu nói (ví dụ thẻ <p> hoặc <div> có class cụ thể)
-        # Lưu ý: Phần này phải khớp với cấu trúc HTML của web bạn chọn
+        # Lọc câu tiếng Việt dài trên 15 ký tự
         quotes = [p.text.strip() for p in soup.find_all('p') if len(p.text) > 15]
-        
-        return quotes if quotes else ["Sống là cho đâu chỉ nhận riêng mình."]
+        return quotes if quotes else CACHE["quotes"]
     except:
-        return ["Hãy yêu công việc bạn đang làm."]
+        return CACHE["quotes"]
 
 @app.get("/quote")
 def get_quote():
     tz = pytz.timezone('Asia/Ho_Chi_Minh')
-    hour = datetime.now(tz).hour
+    now = datetime.now(tz)
+    today = now.strftime("%Y-%m-%d")
     
-    # Lấy dữ liệu cào được
-    all_quotes = scrape_quotes()
-    content = random.choice(all_quotes)
+    # LOGIC CACHE: Nếu là ngày mới, cào lại dữ liệu
+    if CACHE["date"] != today:
+        CACHE["quotes"] = scrape_quotes()
+        CACHE["date"] = today
+        print(f"Đã cập nhật cache cho ngày: {today}")
+
+    # Lấy câu nói từ cache (cực nhanh vì đã nằm trong RAM)
+    content = random.choice(CACHE["quotes"])
     
-    # Phân loại tự động theo giờ
-    if 5 <= hour < 12: category = "🌱 Năng lượng"
-    elif 12 <= hour < 18: category = "💡 Góc nhìn"
+    # Phân loại theo giờ
+    if 5 <= now.hour < 12: category = "🌱 Năng lượng"
+    elif 12 <= now.hour < 18: category = "💡 Góc nhìn"
     else: category = "🧠 Suy ngẫm"
     
-    # Kết hợp thời tiết (hàm get_weather_theme giữ nguyên như cũ)
+    # Thời tiết (giữ nguyên hàm get_weather_theme)
     weather = get_weather_theme()
     
     return {
