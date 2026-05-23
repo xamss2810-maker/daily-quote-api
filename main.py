@@ -9,27 +9,27 @@ import random
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-CACHE = {"time_slot": None, "quotes": ["Chào bạn, một ngày mới tốt lành!"]}
+CACHE = {"time_slot": None, "quotes": ["Sống là cho đâu chỉ nhận riêng mình."]}
 
 def get_weather_theme():
     try:
         response = requests.get("https://wttr.in/Ho_Chi_Minh?format=j1", timeout=3)
         data = response.json()
-        current = data['current_condition'][0]
-        code = int(current['weatherCode'])
-        if code == 113: return {"desc": "☀️ Nắng", "colors": ["#f59e0b", "#d97706"]}
-        elif code in [116, 119, 122]: return {"desc": "☁️ Mây", "colors": ["#475569", "#1e293b"]}
-        elif code >= 176 and code <= 356: return {"desc": "🌧️ Mưa", "colors": ["#1e3a8a", "#0f172a"]}
-        return {"desc": "✨ Dịu", "colors": ["#111827", "#030712"]}
+        code = int(data['current_condition'][0]['weatherCode'])
+        
+        if code == 113: return ["#f59e0b", "#d97706"], "☀️ Nắng"
+        elif code in [116, 119, 122]: return ["#475569", "#1e293b"], "☁️ Mây"
+        elif code >= 176 and code <= 356: return ["#1e3a8a", "#0f172a"], "🌧️ Mưa"
+        return ["#111827", "#030712"], "✨ Dịu"
     except:
-        return {"desc": "🍃 Bình yên", "colors": ["#065f46", "#022c22"]}
+        return ["#065f46", "#022c22"], "🍃 Bình yên"
 
 def scrape_quotes():
     try:
         url = "https://www.thuvien-hay.com/danh-ngon-cuoc-song/"
         response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=5)
         soup = BeautifulSoup(response.content, 'html.parser')
-        quotes = [p.text.strip() for p in soup.find_all('p') if 15 < len(p.text) < 150]
+        quotes = [p.text.strip() for p in soup.find_all('p') if len(p.text) > 20]
         return quotes if quotes else CACHE["quotes"]
     except:
         return CACHE["quotes"]
@@ -45,15 +45,18 @@ def get_quote():
             CACHE["quotes"] = scrape_quotes()
             CACHE["time_slot"] = current_time_slot
 
+        # Lấy màu và trạng thái thời tiết
+        colors, weather_desc = get_weather_theme()
+        
         # Phân loại giờ
-        if 5 <= now.hour < 12: cat, keys = "🌱 Năng lượng sáng", ["mới", "sáng", "bắt đầu"]
-        elif 12 <= now.hour < 18: cat, keys = "💡 Góc nhìn trưa", ["làm", "sống", "thời"]
-        else: cat, keys = "🧠 Suy ngẫm tối", ["đêm", "tối", "nghỉ", "suy"]
+        if 5 <= now.hour < 12: cat = "🌱 Năng lượng sáng"
+        elif 12 <= now.hour < 18: cat = "💡 Góc nhìn trưa"
+        else: cat = "🧠 Suy ngẫm tối"
         
-        filtered = [q for q in CACHE["quotes"] if any(k in q.lower() for k in keys)]
-        content = random.choice(filtered) if filtered else random.choice(CACHE["quotes"])
-        weather = get_weather_theme()
-        
-        return {"category": f"{cat} | {weather['desc']}", "content": content, "bg_colors": weather["colors"]}
+        return {
+            "category": f"{cat} | {weather_desc}", 
+            "content": random.choice(CACHE["quotes"]), 
+            "bg_colors": colors
+        }
     except:
-        return {"category": "HỆ THỐNG", "content": "Đang làm mới dữ liệu...", "bg_colors": ["#374151", "#1f2937"]}
+        return {"category": "HỆ THỐNG", "content": "Đang kết nối...", "bg_colors": ["#374151", "#1f2937"]}
