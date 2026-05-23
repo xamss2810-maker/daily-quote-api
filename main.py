@@ -20,10 +20,10 @@ def get_weather_theme(lat=None, lon=None):
         data = response.json()
         code = int(data['current_condition'][0]['weatherCode'])
         
-        if code == 113: return ["#f59e0b", "#d97706"], "Nang", "☀️"
-        elif code in [116, 119, 122]: return ["#475569", "#1e293b"], "May", "☁️"
-        elif code >= 176 and code <= 356: return ["#1e3a8a", "#0f172a"], "Mua", "🌧️"
-        return ["#111827", "#030712"], "Diu", "✨"
+        if code == 113: return ["#f59e0b", "#d97706"], "Nắng", "☀️"
+        elif code in [116, 119, 122]: return ["#475569", "#1e293b"], "Mây", "☁️"
+        elif code >= 176 and code <= 356: return ["#1e3a8a", "#0f172a"], "Mưa", "🌧️"
+        return ["#111827", "#030712"], "Dịu", "✨"
     except:
         return ["#065f46", "#022c22"], "Binh yen", "🍃"
 
@@ -51,9 +51,9 @@ def get_quote(lat: float = None, lon: float = None):
         # Lấy thời tiết dựa trên tọa độ truyền vào
         colors, weather_desc, weather_icon = get_weather_theme(lat, lon)
         
-        if 5 <= now.hour < 12: cat = "Nang luong sang"
-        elif 12 <= now.hour < 18: cat = "Goc nhin trua"
-        else: cat = "Suy ngam toi"
+        if 5 <= now.hour < 12: cat = "🌱 Năng lượng sáng"
+        elif 12 <= now.hour < 18: cat = "💡 Góc nhìn trưa"
+        else: cat = "🧠 Suy ngẫm tối"
         
         return {
             "category": f"{weather_icon} {cat} | {weather_desc}", 
